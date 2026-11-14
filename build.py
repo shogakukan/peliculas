@@ -23,6 +23,14 @@ SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "diary.csv"
 OUT = ROOT / "docs" / "data.js"
 
 
+def read_existing_years():
+    try:
+        text = OUT.read_text(encoding="utf-8").strip()
+        return json.loads(text.removeprefix("window.DIARY = ").removesuffix(";"))["years"]
+    except (OSError, ValueError, KeyError):
+        return None
+
+
 def main():
     # years[year][group][tag] = count
     years = defaultdict(lambda: {"cine": defaultdict(int), "tv": defaultdict(int)})
@@ -48,21 +56,23 @@ def main():
             else:
                 years[year]["tv"][tags[0]] += 1
 
-    data = {
-        "generated": datetime.now().isoformat(timespec="seconds"),
-        "years": {
-            y: {g: dict(sorted(c.items())) for g, c in years[y].items()}
-            for y in sorted(years)
-        },
+    new_years = {
+        y: {g: dict(sorted(c.items())) for g, c in years[y].items()}
+        for y in sorted(years)
     }
-    OUT.parent.mkdir(exist_ok=True)
-    OUT.write_text(
-        "window.DIARY = " + json.dumps(data, ensure_ascii=False, indent=1) + ";\n",
-        encoding="utf-8",
-    )
-
     total = sum(sum(c.values()) for y in years.values() for c in y.values())
-    print(f"OK: {total} registros en {len(years)} años -> {OUT.relative_to(ROOT)}")
+
+    # Solo reescribir si cambiaron los datos (así "generated" = última vez que cambiaron).
+    if read_existing_years() == new_years:
+        print(f"Sin cambios: {total} registros en {len(years)} años")
+    else:
+        data = {"generated": datetime.now().isoformat(timespec="seconds"), "years": new_years}
+        OUT.parent.mkdir(exist_ok=True)
+        OUT.write_text(
+            "window.DIARY = " + json.dumps(data, ensure_ascii=False, indent=1) + ";\n",
+            encoding="utf-8",
+        )
+        print(f"OK: {total} registros en {len(years)} años -> {OUT.relative_to(ROOT)}")
     for reason, n in skipped.items():
         print(f"  ignorados ({reason}): {n}")
 

@@ -6,9 +6,11 @@ Visualiza los registros del Diary de Letterboxd agrupados por tag.
 
 1. Exportar desde Letterboxd (Settings → Import & Export → Export your data) y copiar `diary.csv` a la raíz del repo.
    El CSV no se versiona (`.gitignore`): solo se publica `docs/data.js`, que tiene totales por año y tag.
-2. `python3 build.py` → regenera `docs/data.js` e imprime cuántos registros se ignoraron.
-3. Abrir `docs/index.html` para revisar (funciona con doble clic, sin servidor).
-4. `git add docs/data.js && git commit -m "Actualizar datos" && git push`
+2. `./publicar.sh` → regenera `docs/data.js`, commitea y hace push, todo de una.
+   Acepta un mensaje de commit opcional: `./publicar.sh "Corrijo tags de 2019"`.
+
+Para revisar antes de publicar: `python3 build.py` y abrir `docs/index.html` (funciona con doble clic).
+`build.py` solo reescribe `data.js` si cambiaron los datos.
 
 ## Reglas
 

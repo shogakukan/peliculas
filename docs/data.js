@@ -1,8 +1,15 @@
 window.DIARY = {
- "generated": "2026-11-14T12:08:02",
+ "generated": "2026-11-14T13:53:33",
  "years": {
   "2022": {
-   "cine": {},
+   "cine": {
+    "alianza francesa": 1,
+    "cinemark abasto": 3,
+    "cinemark dot": 1,
+    "cinemark palermo": 5,
+    "cinemark puerto madero": 1,
+    "multiplex belgrano": 1
+   },
    "tv": {
     "contar": 1,
     "max": 10,
@@ -14,7 +21,18 @@ window.DIARY = {
    }
   },
   "2023": {
-   "cine": {},
+   "cine": {
+    "atlas patio bullrich": 1,
+    "cck": 1,
+    "cinemark abasto": 9,
+    "cinemark dot": 1,
+    "cinemark palermo": 12,
+    "gaumont": 2,
+    "imax norcenter": 1,
+    "malba": 1,
+    "multiplex belgrano": 7,
+    "showcase belgrano": 1
+   },
    "tv": {
     "max": 11,
     "mubi": 7,
@@ -27,7 +45,14 @@ window.DIARY = {
   },
   "2024": {
    "cine": {
-    "cinemark palermo": 1
+    "atlas caballito": 3,
+    "cc san martin": 4,
+    "cinemark abasto": 1,
+    "cinemark caballito": 2,
+    "cinemark palermo": 17,
+    "cinepolis recoleta": 1,
+    "club lucero": 1,
+    "multiplex belgrano": 1
    },
    "tv": {
     "cinear": 2,
