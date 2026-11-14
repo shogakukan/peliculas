@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Diario: Cine y TV</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-0: #f4f3ef;
+    --surface-1: #fcfcfb;
+    --border: #e2e0da;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #7a7974;
+    --cine: #2a78d6;
+    --tv: #eb6834;
+    --tint-group: 10%;
+    --tint-leaf: 32%;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --surface-0: #121211;
+      --surface-1: #1a1a19;
+      --border: #2e2e2c;
+      --text-primary: #f0efec;
+      --text-secondary: #c3c2b7;
+      --text-muted: #8f8e86;
+      --cine: #3987e5;
+      --tv: #d95926;
+      --tint-group: 14%;
+      --tint-leaf: 42%;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-0: #121211;
+    --surface-1: #1a1a19;
+    --border: #2e2e2c;
+    --text-primary: #f0efec;
+    --text-secondary: #c3c2b7;
+    --text-muted: #8f8e86;
+    --cine: #3987e5;
+    --tv: #d95926;
+    --tint-group: 14%;
+    --tint-leaf: 42%;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--surface-0);
+    color: var(--text-primary);
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+
+  /* First screen: header + chart fill exactly the viewport. */
+  .screen {
+    height: 100vh; height: 100dvh;
+    display: flex; flex-direction: column;
+    padding: 12px 16px;
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+    gap: 10px;
+  }
+  header {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px;
+  }
+  h1 { font-size: 20px; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
+  header label { color: var(--text-secondary); font-size: 14px; display: flex; align-items: center; gap: 8px; }
+  select {
+    font: inherit; color: var(--text-primary); background: var(--surface-1);
+    border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; min-width: 100px;
+  }
+  .stats { margin-left: auto; font-size: 14px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+  .stats b { color: var(--text-primary); font-weight: 600; }
+  .stats i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin: 0 4px 0 10px; }
+
+  .card {
+    flex: 1; min-height: 0; position: relative;
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px;
+    overflow: hidden;
+  }
+  #chart { position: absolute; inset: 0; }
+  #chart svg { display: block; width: 100%; height: 100%; }
+  .crumb {
+    position: absolute; top: 8px; left: 8px; z-index: 1;
+    font: inherit; font-size: 13px; color: var(--text-secondary);
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 999px;
+    padding: 4px 12px; cursor: pointer;
+  }
+  .crumb[hidden] { display: none; }
+  .empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--text-muted); }
+
+  circle.group { stroke-width: 1.5; cursor: zoom-in; }
+  circle.leaf { stroke: var(--surface-1); stroke-width: 2; cursor: pointer; }
+  circle.leaf:hover { stroke: var(--text-primary); stroke-width: 1.5; }
+  .g-cine circle.group { fill: color-mix(in oklab, var(--cine) var(--tint-group), var(--surface-1)); stroke: var(--cine); }
+  .g-tv   circle.group { fill: color-mix(in oklab, var(--tv) var(--tint-group), var(--surface-1)); stroke: var(--tv); }
+  .g-cine circle.leaf  { fill: color-mix(in oklab, var(--cine) var(--tint-leaf), var(--surface-1)); }
+  .g-tv   circle.leaf  { fill: color-mix(in oklab, var(--tv) var(--tint-leaf), var(--surface-1)); }
+  .zoomed circle.group { cursor: default; }
+
+  text { pointer-events: none; fill: var(--text-primary); text-anchor: middle; }
+  text.leaf-name { font-weight: 550; text-transform: capitalize; }
+  text.leaf-n { fill: var(--text-secondary); font-variant-numeric: tabular-nums; }
+  text.group-name {
+    font-weight: 700; font-size: 16px; letter-spacing: 0.02em;
+    paint-order: stroke; stroke: var(--surface-1); stroke-width: 4px; stroke-linejoin: round;
+  }
+
+  .tip {
+    position: fixed; z-index: 10; pointer-events: none;
+    background: var(--surface-1); color: var(--text-primary);
+    border: 1px solid var(--border); border-radius: 8px;
+    box-shadow: 0 4px 16px rgb(0 0 0 / 0.12);
+    padding: 8px 10px; font-size: 13px; line-height: 1.35; max-width: 240px;
+    opacity: 0; transition: opacity .1s;
+  }
+  .tip.on { opacity: 1; }
+  .tip .t { font-weight: 600; text-transform: capitalize; display: flex; align-items: center; gap: 6px; }
+  .tip .t i { width: 10px; height: 10px; border-radius: 50%; }
+  .tip .m { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+
+  .below { padding: 8px 16px 32px; max-width: 720px; }
+  summary { cursor: pointer; color: var(--text-secondary); font-size: 14px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; font-variant-numeric: tabular-nums; }
+  th, td { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left; }
+  td.n, th.n { text-align: right; }
+  tr.grp td { font-weight: 650; padding-top: 14px; }
+  tr.tag td:first-child { padding-left: 24px; text-transform: capitalize; }
+  footer { margin-top: 20px; font-size: 12px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+<section class="screen">
+  <header>
+    <h1>Cine y TV</h1>
+    <label>Año <select id="year"></select></label>
+    <div class="stats" id="stats"></div>
+  </header>
+  <div class="card">
+    <button class="crumb" id="back" hidden>← Ver todo</button>
+    <div id="chart"></div>
+  </div>
+</section>
+
+<section class="below">
+  <details>
+    <summary>Ver como tabla</summary>
+    <table>
+      <thead><tr><th>Lugar</th><th class="n">Registros</th><th class="n">%</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </details>
+  <footer id="footer"></footer>
+</section>
+<div class="tip" id="tip" role="tooltip"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="data.js"></script>
+<script>
+(function () {
+  const DATA = window.DIARY;
+  const YEARS = Object.keys(DATA.years).sort();
+  const GROUPS = [
+    { key: "cine", name: "Cine" },
+    { key: "tv", name: "TV" },
+  ];
+  // Geometry (px): edge padding, space for a group label above its circle,
+  // minimum gap between the two group circles, gap between leaf circles.
+  const PAD = 10, LABEL = 28, GAP = 14, LEAF_GAP = 3;
+
+  const fmt = d3.format(",");
+  const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0) + "%";
+
+  const sel = document.getElementById("year");
+  const chart = document.getElementById("chart");
+  const tip = document.getElementById("tip");
+  const back = document.getElementById("back");
+
+  // ---- year selector (default: hash or latest year) ----
+  sel.innerHTML =
+    '<option value="all">Todos</option>' +
+    YEARS.slice().reverse().map((y) => `<option value="${y}">${y}</option>`).join("");
+  const validYear = (h) => h === "all" || YEARS.includes(h);
+  const fromHash = decodeURIComponent(location.hash.slice(1));
+  sel.value = validYear(fromHash) ? fromHash : YEARS[YEARS.length - 1];
+  sel.addEventListener("change", () => {
+    history.replaceState(null, "", "#" + sel.value);
+    render();
+  });
+  window.addEventListener("hashchange", () => {
+    const h = decodeURIComponent(location.hash.slice(1));
+    if (h !== sel.value && validYear(h)) { sel.value = h; render(); }
+  });
+
+  document.getElementById("footer").textContent =
+    "Datos generados el " +
+    new Date(DATA.generated).toLocaleString("es-AR", { dateStyle: "long", timeStyle: "short" });
+
+  function aggregate(year) {
+    const ys = year === "all" ? YEARS : [year];
+    const acc = { cine: {}, tv: {} };
+    for (const y of ys) for (const g of GROUPS) {
+      for (const [tag, n] of Object.entries(DATA.years[y][g.key] || {})) {
+        acc[g.key][tag] = (acc[g.key][tag] || 0) + n;
+      }
+    }
+    return {
+      name: "root",
+      children: GROUPS.map((g) => ({
+        name: g.name, key: g.key,
+        children: Object.entries(acc[g.key]).map(([tag, n]) => ({ name: tag, value: n })),
+      })).filter((g) => g.children.length),
+    };
+  }
+
+  // ---- Placement of the two group circles inside a W×H box -------------
+  // Radii are fixed relative to each other (area ∝ records), so the only free
+  // variable is the scale. Find the largest scale at which both circles fit,
+  // using opposite corners if needed, then lay them out along the long axis
+  // (side by side on landscape, stacked on portrait) as aligned as possible.
+  function place(ra, rb, W, H) {
+    const w = W - 2 * PAD, h = H - 2 * PAD - LABEL; // usable box for circles
+
+    if (rb == null) {
+      const s = Math.min(w, h) / (2 * ra);
+      return { s, a: [W / 2, PAD + LABEL + h / 2] };
+    }
+
+    // Needed center separation: horizontally just the gap; vertically the
+    // lower circle's label also sits in between. Elliptical blend for diagonals.
+    const fits = (s) => {
+      const A = ra * s, B = rb * s, M = Math.max(A, B);
+      if (2 * M > w || 2 * M > h) return false;
+      const dx = w - A - B, dy = h - A - B;
+      const sx = A + B + GAP, sy = A + B + GAP + LABEL;
+      return (dx / sx) ** 2 + (dy / sy) ** 2 >= 1 || dx >= sx || dy >= sy;
+    };
+    let lo = 0, hi = Math.min(w, h) / (2 * Math.max(ra, rb));
+    for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; fits(m) ? (lo = m) : (hi = m); }
+    const s = lo, A = ra * s, B = rb * s;
+    const sx = A + B + GAP, sy = A + B + GAP + LABEL;
+
+    let dx, dy;
+    if (w >= h) { // landscape: side by side, drop diagonally only if needed
+      dx = Math.min(sx, w - A - B);
+      dy = dx >= sx ? 0 : sy * Math.sqrt(Math.max(0, 1 - (dx / sx) ** 2));
+    } else {      // portrait: stacked
+      dy = Math.min(sy, h - A - B);
+      dx = dy >= sy ? 0 : sx * Math.sqrt(Math.max(0, 1 - (dy / sy) ** 2));
+    }
+    // a at (0,0), b at (dx,dy); center the bounding box (labels included).
+    const minX = Math.min(-A, dx - B), maxX = Math.max(A, dx + B);
+    const minY = Math.min(-A - LABEL, dy - B - LABEL), maxY = Math.max(A, dy + B);
+    const ox = (W - (maxX - minX)) / 2 - minX, oy = (H - (maxY - minY)) / 2 - minY;
+    return { s, a: [ox, oy], b: [ox + dx, oy + dy] };
+  }
+
+  function render() {
+    hideTip();
+    const tree = aggregate(sel.value);
+    const root = d3.hierarchy(tree).sum((d) => d.value || 0);
+    root.children && root.children.forEach((g) => g.children.sort((a, b) => b.value - a.value));
+    const total = root.value || 0;
+    const byKey = Object.fromEntries((root.children || []).map((c) => [c.data.key, c.value]));
+
+    document.getElementById("stats").innerHTML =
+      `<b>${fmt(total)}</b> registros` +
+      `<i style="background:var(--cine)"></i>Cine <b>${fmt(byKey.cine || 0)}</b>` +
+      `<i style="background:var(--tv)"></i>TV <b>${fmt(byKey.tv || 0)}</b>`;
+    renderTable(root, total);
+
+    chart.innerHTML = "";
+    back.hidden = true;
+    if (!total) {
+      chart.innerHTML = '<div class="empty">No hay registros con tags para este año.</div>';
+      return;
+    }
+
+    const W = chart.clientWidth, H = chart.clientHeight;
+    const groupsData = root.children;
+
+    // Pack each group with leaf area ∝ records (same units for both groups).
+    // Two passes so the gap between leaves ends up ≈ LEAF_GAP px on screen.
+    const packAt = (padding) => {
+      d3.pack().radius((d) => Math.sqrt(d.value)).padding(padding)(root);
+      return place(groupsData[0].r, groupsData[1] && groupsData[1].r, W, H);
+    };
+    let pl = packAt(0);
+    pl = packAt(LEAF_GAP / pl.s);
+
+    // Convert to absolute pixel coords (X, Y, R).
+    groupsData.forEach((g, i) => {
+      const [cx, cy] = i === 0 ? pl.a : pl.b;
+      g.each((n) => {
+        n.X = cx + (n.x - g.x) * pl.s;
+        n.Y = cy + (n.y - g.y) * pl.s;
+        n.R = n.r * pl.s;
+      });
+    });
+
+    // Leaf labels: precompute 1-line and best 2-line splits.
+    root.leaves().forEach((d) => {
+      const w = d.data.name.split(" ");
+      d.lines1 = [d.data.name];
+      if (w.length > 1) {
+        let best = 1, bestLen = Infinity;
+        for (let i = 1; i < w.length; i++) {
+          const len = Math.max(w.slice(0, i).join(" ").length, w.slice(i).join(" ").length);
+          if (len < bestLen) { best = i; bestLen = len; }
+        }
+        d.lines2 = [w.slice(0, best).join(" "), w.slice(best).join(" ")];
+      }
+    });
+
+    const svg = d3.select(chart).append("svg")
+      .attr("viewBox", [0, 0, W, H])
+      .attr("role", "img")
+      .attr("aria-label", `Circle packing de registros por lugar, ${sel.value === "all" ? "todos los años" : sel.value}`);
+
+    svg.append("rect").attr("width", W).attr("height", H).attr("fill", "transparent")
+      .on("click", () => zoomTo(null));
+
+    const groups = svg.selectAll("g.grp").data(groupsData).join("g")
+      .attr("class", (d) => "grp g-" + d.data.key);
+    const gCircle = groups.append("circle").attr("class", "group")
+      .on("click", (e, d) => { e.stopPropagation(); zoomTo(focus === d ? null : d); });
+
+    const leaves = groups.selectAll("g.leaf").data((d) => d.children).join("g").attr("class", "leaf");
+    const isTouch = (e) => e.pointerType === "touch" || e.pointerType === "pen";
+    const lCircle = leaves.append("circle").attr("class", "leaf")
+      .on("click", (e, d) => {
+        e.stopPropagation();
+        // Touch: first tap zooms into the group, next taps show the leaf's detail.
+        if (isTouch(e) && focus === d.parent) return showTip(e, d, total);
+        zoomTo(focus === d.parent ? null : d.parent);
+      })
+      .on("pointerenter pointermove", (e, d) => { if (!isTouch(e)) showTip(e, d, total); })
+      .on("pointerleave", (e) => { if (!isTouch(e)) hideTip(); });
+    leaves.append("text").attr("class", "leaf-name");
+    leaves.append("text").attr("class", "leaf-n").text((d) => fmt(d.value));
+
+    const gName = groups.append("text").attr("class", "group-name")
+      .text((d) => `${d.data.name} · ${fmt(d.value)}`);
+
+    // ---- view: [centerX, centerY, k] in pixel space; home = identity ----
+    const home = [W / 2, H / 2, 1];
+    const viewFor = (g) => {
+      if (!g) return home;
+      const k = Math.min((W - 2 * PAD) / (2 * g.R), (H - 2 * PAD - LABEL) / (2 * g.R));
+      return [g.X, g.Y - LABEL / 2 / k, k];
+    };
+    let focus = null, view = home;
+
+    function apply(v) {
+      view = v;
+      const [vx, vy, k] = v;
+      const sx = (X) => (X - vx) * k + W / 2, sy = (Y) => (Y - vy) * k + H / 2;
+      const T = (d) => `translate(${sx(d.X)},${sy(d.Y)})`;
+      gCircle.attr("transform", T).attr("r", (d) => d.R * k);
+      lCircle.attr("transform", T).attr("r", (d) => d.R * k);
+      gName.attr("transform", (d) => `translate(${sx(d.X)},${sy(d.Y) - d.R * k - 9})`);
+
+      leaves.each(function (d) {
+        const r = d.R * k, x = sx(d.X), y = sy(d.Y);
+        // Largest font (≤ 22px) at which the name fits; 2 lines if that's bigger.
+        const fit = (lines) => Math.min(22, (r * 1.3) / (1.1 * lines.length + 1),
+          (r * 1.6) / (d3.max(lines, (l) => l.length) * 0.56));
+        let lines = d.lines1, fs = fit(lines);
+        if (d.lines2 && fit(d.lines2) > fs + 1) { lines = d.lines2; fs = fit(lines); }
+        const nameFits = r > 22 && fs >= 9;
+        const showN = r > 14;
+        const nfs = Math.max(10, Math.min(fs, 22) * 0.85);
+        const nameH = nameFits ? lines.length * fs * 1.1 : 0;
+        const top = y - (nameH + (showN ? nfs * 1.15 : 0)) / 2;
+
+        const t = d3.select(this).select(".leaf-name")
+          .attr("display", nameFits ? null : "none")
+          .attr("font-size", fs)
+          .attr("transform", `translate(${x},${top})`);
+        if (nameFits && t.attr("data-l") !== String(lines.length)) {
+          t.attr("data-l", lines.length).selectAll("tspan").data(lines).join("tspan")
+            .attr("x", 0).attr("dy", (_, i) => (i ? "1.1em" : "0.85em")).text((l) => l);
+        }
+        d3.select(this).select(".leaf-n")
+          .attr("display", showN ? null : "none")
+          .attr("font-size", nfs)
+          .attr("transform", `translate(${x},${top + nameH + nfs * 0.9})`);
+      });
+    }
+
+    function zoomTo(g) {
+      hideTip();
+      if (g === focus) return;
+      focus = g;
+      back.hidden = !g;
+      svg.classed("zoomed", !!g);
+      groups.transition().duration(400).attr("opacity", (d) => (!g || d === g ? 1 : 0.2));
+      const from = view, to = viewFor(g);
+      // interpolateZoom works on [x, y, width]; width = W / k.
+      const i = d3.interpolateZoom([from[0], from[1], W / from[2]], [to[0], to[1], W / to[2]]);
+      svg.transition().duration(650).ease(d3.easeCubicInOut)
+        .tween("zoom", () => (t) => { const [x, y, w] = i(t); apply([x, y, W / w]); });
+    }
+
+    back.onclick = () => zoomTo(null);
+    apply(home);
+  }
+
+  function showTip(e, d, total) {
+    const g = d.parent;
+    tip.innerHTML =
+      `<div class="t"><i style="background:var(--${g.data.key})"></i>${d.data.name}</div>` +
+      `<div class="m">${g.data.name} · ${fmt(d.value)} registro${d.value === 1 ? "" : "s"}</div>` +
+      `<div class="m">${pct(d.value, g.value)} de ${g.data.name} · ${pct(d.value, total)} del total</div>`;
+    tip.classList.add("on");
+    const pad = 14, w = tip.offsetWidth, h = tip.offsetHeight;
+    let x = e.clientX + pad, y = e.clientY + pad;
+    if (x + w > innerWidth - 8) x = e.clientX - w - pad;
+    if (y + h > innerHeight - 8) y = e.clientY - h - pad;
+    tip.style.left = x + "px";
+    tip.style.top = y + "px";
+  }
+  function hideTip() { tip.classList.remove("on"); }
+
+  function renderTable(root, total) {
+    const rows = [];
+    for (const g of root.children || []) {
+      rows.push(`<tr class="grp"><td>${g.data.name}</td><td class="n">${fmt(g.value)}</td><td class="n">${pct(g.value, total)}</td></tr>`);
+      for (const l of g.children) {
+        rows.push(`<tr class="tag"><td>${l.data.name}</td><td class="n">${fmt(l.value)}</td><td class="n">${pct(l.value, g.value)}</td></tr>`);
+      }
+    }
+    document.getElementById("tbody").innerHTML =
+      rows.join("") || '<tr><td colspan="3">Sin registros.</td></tr>';
+  }
+
+  // Re-layout whenever the chart area changes size (rotation, window resize).
+  let size = [0, 0], t;
+  new ResizeObserver(() => {
+    clearTimeout(t);
+    t = setTimeout(() => {
+      const s = [chart.clientWidth, chart.clientHeight];
+      if (Math.abs(s[0] - size[0]) > 4 || Math.abs(s[1] - size[1]) > 4) { size = s; render(); }
+    }, 120);
+  }).observe(chart);
+})();
+</script>
+</body>
+</html>

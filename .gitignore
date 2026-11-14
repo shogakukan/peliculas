@@ -1,0 +1,5 @@
+# Export de Letterboxd: se procesa en local, solo se publica docs/data.js (totales)
+diary.csv
+
+.DS_Store
+__pycache__/
