@@ -1,5 +1,5 @@
 window.DIARY = {
- "generated": "2026-11-14T13:53:33",
+ "generated": "2026-11-15T00:00:37",
  "years": {
   "2022": {
    "cine": {
@@ -102,6 +102,7 @@ window.DIARY = {
     "cinepolis houssay": 2,
     "cinepolis recoleta": 1,
     "gaumont": 3,
+    "lugones": 1,
     "multiplex belgrano": 2,
     "showcase belgrano": 1,
     "teatro 25 de mayo": 1
