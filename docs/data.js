@@ -1,5 +1,5 @@
 window.DIARY = {
- "generated": "2026-11-15T00:00:37",
+ "generated": "2026-11-19T10:32:24",
  "years": {
   "2022": {
    "cine": {
@@ -98,7 +98,7 @@ window.DIARY = {
     "atlas caballito": 1,
     "cinemark abasto": 1,
     "cinemark dot": 1,
-    "cinemark palermo": 17,
+    "cinemark palermo": 18,
     "cinepolis houssay": 2,
     "cinepolis recoleta": 1,
     "gaumont": 3,
@@ -112,7 +112,7 @@ window.DIARY = {
     "mubi": 9,
     "netflix": 2,
     "prime": 4,
-    "torrent": 19,
+    "torrent": 20,
     "youtube": 1
    }
   }
